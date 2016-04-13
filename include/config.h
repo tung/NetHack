@@ -497,7 +497,6 @@ typedef unsigned char uchar;
 
 /* #define STATUS_VIA_WINDOWPORT */ /* re-work of the status line
                                        updating process */
-/* #define STATUS_HILITES */        /* support hilites of status fields */
 
 /* #define WINCHAIN */              /* stacked window systems */
 

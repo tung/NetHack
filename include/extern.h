@@ -154,12 +154,6 @@ E void NDECL(bot);
 E void FDECL(status_initialize, (BOOLEAN_P));
 E void NDECL(status_finish);
 E void FDECL(status_notify_windowport, (BOOLEAN_P));
-#ifdef STATUS_HILITES
-E boolean FDECL(set_status_hilites, (char *op, BOOLEAN_P));
-E void FDECL(clear_status_hilites, (BOOLEAN_P));
-E char *FDECL(get_status_hilites, (char *, int));
-E boolean NDECL(status_hilite_menu);
-#endif
 #endif
 
 /* ### cmd.c ### */
@@ -2682,9 +2676,6 @@ E void NDECL(genl_status_finish);
 E void FDECL(genl_status_enablefield,
              (int, const char *, const char *, BOOLEAN_P));
 E void FDECL(genl_status_update, (int, genericptr_t, int, int));
-#ifdef STATUS_HILITES
-E void FDECL(genl_status_threshold, (int, int, anything, int, int, int));
-#endif
 #endif
 
 /* ### wizard.c ### */

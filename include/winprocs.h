@@ -80,9 +80,6 @@ struct window_procs {
     void FDECL((*win_status_enablefield),
                (int, const char *, const char *, BOOLEAN_P));
     void FDECL((*win_status_update), (int, genericptr_t, int, int));
-#ifdef STATUS_HILITES
-    void FDECL((*win_status_threshold), (int, int, anything, int, int, int));
-#endif
 #endif
     boolean NDECL((*win_can_suspend));
 };
@@ -167,9 +164,6 @@ extern
  */
 #define status_enablefield (*windowprocs.win_status_enablefield)
 #define status_update (*windowprocs.win_status_update)
-#ifdef STATUS_HILITES
-#define status_threshold (*windowprocs.win_status_threshold)
-#endif
 #endif
 
 /*
@@ -239,11 +233,9 @@ extern
 #define WC2_FULLSCREEN 0x01L /* 01 display full screen                    */
 #define WC2_SOFTKEYBOARD 0x02L /* 02 software keyboard */
 #define WC2_WRAPTEXT 0x04L /* 03 wrap long lines of text                */
-#define WC2_HILITE_STATUS \
-    0x08L /* 04 hilite fields in status                */
-#define WC2_SELECTSAVED 0x10L /* 05 saved game selection menu */
-#define WC2_DARKGRAY 0x20L /* 06 use bold black for black glyphs        */
-                           /* 26 free bits */
+#define WC2_SELECTSAVED 0x08L /* 04 saved game selection menu */
+#define WC2_DARKGRAY 0x10L /* 05 use bold black for black glyphs        */
+                           /* 27 free bits */
 
 #define ALIGN_LEFT 1
 #define ALIGN_RIGHT 2
@@ -389,10 +381,6 @@ struct chain_procs {
     void FDECL((*win_status_enablefield),
                (CARGS, int, const char *, const char *, BOOLEAN_P));
     void FDECL((*win_status_update), (CARGS, int, genericptr_t, int, int));
-#ifdef STATUS_HILITES
-    void FDECL((*win_status_threshold),
-               (CARGS, int, int, anything, int, int, int));
-#endif
 #endif
     boolean FDECL((*win_can_suspend), (CARGS));
 };

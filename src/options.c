@@ -203,11 +203,6 @@ static struct Bool_Opt {
     { "sparkle", &flags.sparkle, TRUE, SET_IN_GAME },
     { "splash_screen", &iflags.wc_splash_screen, TRUE, DISP_IN_GAME }, /*WC*/
     { "standout", &flags.standout, FALSE, SET_IN_GAME },
-#if defined(STATUS_VIA_WINDOWPORT) && defined(STATUS_HILITES)
-    { "statushilites", &iflags.use_status_hilites, TRUE, SET_IN_GAME },
-#else
-    { "statushilites", &iflags.use_status_hilites, FALSE, DISP_IN_GAME },
-#endif
     { "tiled_map", &iflags.wc_tiled_map, PREFER_TILED, DISP_IN_GAME }, /*WC*/
     { "time", &flags.time, FALSE, SET_IN_GAME },
 #ifdef TIMED_DELAY
@@ -3270,25 +3265,6 @@ boolean tinitial, tfrom_file;
             return;
         }
     }
-#if defined(STATUS_VIA_WINDOWPORT) && defined(STATUS_HILITES)
-    /* hilite fields in status prompt */
-    if (match_optname(opts, "hilite_status", 13, TRUE)) {
-        if (duplicate)
-            complain_about_duplicate(opts, 1);
-        op = string_for_opt(opts, TRUE);
-        if (op && negated) {
-            clear_status_hilites(tfrom_file);
-            return;
-        } else if (!op) {
-            /* a value is mandatory */
-            badoption(opts);
-            return;
-        }
-        if (!set_status_hilites(op, tfrom_file))
-            badoption(opts);
-        return;
-    }
-#endif
 
 #if defined(BACKWARD_COMPAT)
     fullname = "DECgraphics";
@@ -3634,7 +3610,6 @@ int nset;
 enum opt_other_enums {
     OPT_OTHER_MSGTYPE = -4,
     OPT_OTHER_MENUCOLOR = -3,
-    OPT_OTHER_STATHILITE = -2,
     OPT_OTHER_APEXC = -1
     /* these must be < 0 */
 };
@@ -3648,11 +3623,6 @@ static struct other_opts {
     { "autopickup exceptions", SET_IN_GAME, OPT_OTHER_APEXC },
     { "menucolors", SET_IN_GAME, OPT_OTHER_MENUCOLOR },
     { "message types", SET_IN_GAME, OPT_OTHER_MSGTYPE },
-#ifdef STATUS_VIA_WINDOWPORT
-#ifdef STATUS_HILITES
-    { "status_hilites", SET_IN_GAME, OPT_OTHER_STATHILITE },
-#endif
-#endif
     { (char *) 0, 0, (enum opt_other_enums) 0 },
 };
 
@@ -3786,14 +3756,6 @@ doset() /* changing options via menu by Per Liboriussen */
                     NULL, count_menucolors());
     opts_add_others(tmpwin, "message types", OPT_OTHER_MSGTYPE,
                     NULL, msgtype_count());
-#ifdef STATUS_VIA_WINDOWPORT
-#ifdef STATUS_HILITES
-    get_status_hilites(buf2, 60);
-    if (!*buf2)
-        Sprintf(buf2, "%s", "(none)");
-    opts_add_others(tmpwin, "status_hilites", OPT_OTHER_STATHILITE, buf2, 0);
-#endif
-#endif
 #ifdef PREFIXES_IN_USE
     any = zeroany;
     add_menu(tmpwin, NO_GLYPH, &any, 0, 0, ATR_NONE, "", MENU_UNSELECTED);
@@ -3817,17 +3779,6 @@ doset() /* changing options via menu by Per Liboriussen */
             if (opt_indx == OPT_OTHER_APEXC) {
                 (void) special_handling("autopickup_exception", setinitial,
                                         fromfile);
-#ifdef STATUS_VIA_WINDOWPORT
-#ifdef STATUS_HILITES
-            } else if (opt_indx == OPT_OTHER_STATHILITE) {
-                if (!status_hilite_menu()) {
-                    pline("Bad status hilite(s) specified.");
-                } else {
-                    if (wc2_supported("status_hilites"))
-                        preference_update("status_hilites");
-                }
-#endif
-#endif
             } else if (opt_indx == OPT_OTHER_MENUCOLOR) {
                     (void) special_handling("menucolors", setinitial,
                                             fromfile);
@@ -5650,9 +5601,6 @@ struct wc_Opt wc2_options[] = { { "fullscreen", WC2_FULLSCREEN },
                                 { "softkeyboard", WC2_SOFTKEYBOARD },
                                 { "wraptext", WC2_WRAPTEXT },
                                 { "use_darkgray", WC2_DARKGRAY },
-#ifdef STATUS_VIA_WINDOWPORT
-                                { "hilite_status", WC2_HILITE_STATUS },
-#endif
                                 { (char *) 0, 0L } };
 
 /*

@@ -1499,11 +1499,7 @@ static const char *build_opts[] = {
     "shell command",
 #endif
 #ifdef STATUS_VIA_WINDOWPORT
-# ifdef STATUS_HILITES
-    "status via windowport with highlighting",
-# else
-    "status via windowport without highlighting",
-# endif
+    "status via windowport",
 #else
     "traditional status display",
 #endif
