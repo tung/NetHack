@@ -77,9 +77,7 @@ struct window_procs {
 #ifdef STATUS_VIA_WINDOWPORT
     void NDECL((*win_status_init));
     void NDECL((*win_status_finish));
-    void FDECL((*win_status_enablefield),
-               (int, const char *, const char *, BOOLEAN_P));
-    void FDECL((*win_status_update), (int, genericptr_t, int, int));
+    void FDECL((*win_status_update), (const struct status_info *));
 #endif
     boolean NDECL((*win_can_suspend));
 };
@@ -162,7 +160,6 @@ extern
 /* there is a status_initialize() in botl.c,
  * which calls win_status_init() directly; same with status_finish.
  */
-#define status_enablefield (*windowprocs.win_status_enablefield)
 #define status_update (*windowprocs.win_status_update)
 #endif
 
@@ -378,9 +375,7 @@ struct chain_procs {
 #ifdef STATUS_VIA_WINDOWPORT
     void FDECL((*win_status_init), (CARGS));
     void FDECL((*win_status_finish), (CARGS));
-    void FDECL((*win_status_enablefield),
-               (CARGS, int, const char *, const char *, BOOLEAN_P));
-    void FDECL((*win_status_update), (CARGS, int, genericptr_t, int, int));
+    void FDECL((*win_status_update), (CARGS, const struct status_info *));
 #endif
     boolean FDECL((*win_can_suspend), (CARGS));
 };

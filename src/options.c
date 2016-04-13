@@ -3413,9 +3413,6 @@ boolean tinitial, tfrom_file;
                 || boolopt[i].addr == &flags.showscore
 #endif
                 || boolopt[i].addr == &flags.showexp) {
-#ifdef STATUS_VIA_WINDOWPORT
-                status_initialize(REASSESS_ONLY);
-#endif
                 context.botl = TRUE;
             } else if (boolopt[i].addr == &flags.invlet_constant) {
                 if (flags.invlet_constant)

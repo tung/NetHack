@@ -500,7 +500,7 @@ display_gamewindows()
 {
     WIN_MESSAGE = create_nhwindow(NHW_MESSAGE);
 #ifdef STATUS_VIA_WINDOWPORT
-    status_initialize(0);
+    status_initialize();
 #else
     WIN_STATUS = create_nhwindow(NHW_STATUS);
 #endif

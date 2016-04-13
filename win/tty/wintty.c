@@ -98,7 +98,7 @@ struct window_procs tty_procs = {
     tty_getmsghistory, tty_putmsghistory,
 #ifdef STATUS_VIA_WINDOWPORT
     genl_status_init,
-    genl_status_finish, genl_status_enablefield,
+    genl_status_finish,
     genl_status_update,
 #endif
     genl_can_suspend_yes,
@@ -2524,8 +2524,6 @@ const char *str;
 
         (void) strncpy(&cw->data[cw->cury][j], str, cw->cols - j - 1);
         cw->data[cw->cury][cw->cols - 1] = '\0'; /* null terminate */
-        cw->cury = (cw->cury + 1) % 2;
-        cw->curx = 0;
         break;
     case NHW_MAP:
         tty_curs(window, cw->curx + 1, cw->cury);

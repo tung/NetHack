@@ -99,4 +99,38 @@ typedef struct mi {
 #define MENU_SEARCH             ':'
 /* clang-format on */
 
+#ifdef STATUS_VIA_WINDOWPORT
+
+/* Maximum number of conditions that can apply simultaneously. */
+/* hunger conf foodpois ill blind stun hallu slime burden */
+#define MAX_STATUS_CONDS 9
+
+struct status_info {
+    char name[11];
+    char title[20];
+    int st, st_extra;
+    int dx, co, in, wi, ch;
+    char align[8];          /* "Chaotic"/"Neutral" */
+    long score;
+
+    char dlvl[13];          /* "Astral Plane" */
+    char gold_sym[11];      /* "\GXXXXNNNN" */
+    long gold;
+    int hp, hp_max;
+    int pw, pw_max;
+    int ac;
+    char exp_label[3];      /* "Xp" or "HD" */
+    int exp_level;          /* level or hit dice */
+    long exp_points;
+    long turns;
+
+    char conds[MAX_STATUS_CONDS][11]; /* "Overloaded" */
+
+    boolean show_score;
+    boolean show_exp_points;
+    boolean show_turns;
+};
+
+#endif /* STATUS_VIA_WINDOWPORT */
+
 #endif /* WINTYPE_H */

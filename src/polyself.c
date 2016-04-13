@@ -108,7 +108,7 @@ set_uasmon()
     }
 
 #ifdef STATUS_VIA_WINDOWPORT
-    status_initialize(REASSESS_ONLY);
+    context.botl = TRUE;
 #endif
 }
 

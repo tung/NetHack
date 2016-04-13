@@ -389,86 +389,31 @@ D.  Status Display Routines
 status_init()   -- core calls this to notify the window port that a status
 		   display is required. The window port should perform 
 		   the necessary initialization in here, allocate memory, etc.
-status_enablefield(int fldindex, char fldname, char fieldfmt, boolean enable)   
-                -- notifies the window port which fields it is authorized to
-		   display.
-		-- This may be called at any time, and is used
-		   to disable as well as enable fields, depending on the 
-		   value of the final argument (TRUE = enable).
-		-- fldindex could be one of the following from botl.h:
-		   BL_TITLE, BL_STR, BL_DX, BL_CO, BL_IN, BL_WI, BL_CH, 
-		   BL_ALIGN, BL_SCORE, BL_CAP, BL_GOLD, BL_ENE, BL_ENEMAX, 
-		   BL_XP, BL_AC, BL_HD, BL_TIME, BL_HUNGER, BL_HP, BL_HPMAX, 
-		   BL_LEVELDESC, BL_EXP, BL_CONDITION
-		-- There are MAXBLSTATS status fields (from botl.h)
-status_update(int fldindex, genericptr_t ptr, int chg, int percentage)
-		-- update the value of a status field.
-		-- the fldindex identifies which field is changing and
-		   is an integer index value from botl.h
-		-- fldindex could be any one of the following from botl.h:
-		   BL_TITLE, BL_STR, BL_DX, BL_CO, BL_IN, BL_WI, BL_CH, 
-		   BL_ALIGN, BL_SCORE, BL_CAP, BL_GOLD, BL_ENE, BL_ENEMAX, 
-		   BL_XP, BL_AC, BL_HD, BL_TIME, BL_HUNGER, BL_HP, BL_HPMAX, 
-		   BL_LEVELDESC, BL_EXP, BL_CONDITION
-		-- fldindex could also be BL_FLUSH (-1), which is not really
-		   a field index, but is a special trigger to tell the 
-		   windowport that it should redisplay all its status fields,
-		   even if no changes have been presented to it.
-		-- ptr is usually a "char *", unless fldindex is BL_CONDITION.
-		   If fldindex is BL_CONDITION, then ptr is a long value with
-		   any or none of the following bits set (from botl.h):
-			BL_MASK_BLIND		0x00000001L
-			BL_MASK_CONF		0x00000002L
-			BL_MASK_FOODPOIS	0x00000004L
-			BL_MASK_ILL		0x00000008L
-			BL_MASK_HALLU		0x00000010L
-			BL_MASK_STUNNED		0x00000020L
-			BL_MASK_SLIMED		0x00000040L
-		-- The value passed for BL_GOLD includes a leading
-		   symbol for GOLD "$:nnn". If the window port needs to use 
-		   the textual gold amount without the leading "$:" the port 
-		   will have to add 2 to the passed "ptr" for the BL_GOLD case.
+status_update(const struct status_info *si)
+		-- Core calls this to send updated status information to the
+		   window port.
+		-- The exact structure of status_info can be found in wintype.h
+		   and should be mostly self-explanatory.
+		-- The name and title fields of status_info are sent
+		   separately, so "Adam the Footpad" is sent as name "Adam"
+		   with title "Footpad".
+		-- The st_extra field is 0 unless strength is 18/01 to 18/**,
+		   in which case it is a value between 1 and 100.
+		-- The gold_sym string field (the "$" in "$:123") may contain
+		   an encoded glyph which will likely only display correctly
+		   with the help of putmixed().
+		-- The conds field is an array of strings listing status
+		   conditions like "Burdened".  Specific conditions are not
+		   guaranteed to appear in the same indices of this list.  The
+		   final array entry may hold a valid status, so window ports
+		   should take care to hard-stop at the end of the array and
+		   not simply rely on an empty string as a sentinel value.
+		-- The score, exp_points and turns fields should only be
+		   displayed by the window port if the show_score,
+		   show_exp_points and show_turns flags are TRUE respectively.
 
 status_finish() -- called when it is time for the window port to tear down
 		   the status display and free allocated memory, etc.
-
-status_threshold(int fldidx, int threshholdtype, anything threshold, 
-					int behavior, int under, int over)
-		-- called when a hiliting preference is added, changed, or
-		   removed.
-		-- the fldindex identifies which field is having its hiliting
-		   preference set. It is an integer index value from botl.h
-		-- fldindex could be any one of the following from botl.h:
-		   BL_TITLE, BL_STR, BL_DX, BL_CO, BL_IN, BL_WI, BL_CH, 
-		   BL_ALIGN, BL_SCORE, BL_CAP, BL_GOLD, BL_ENE, BL_ENEMAX, 
-		   BL_XP, BL_AC, BL_HD, BL_TIME, BL_HUNGER, BL_HP, BL_HPMAX, 
-		   BL_LEVELDESC, BL_EXP, BL_CONDITION
-		-- datatype is P_INT, P_UINT, P_LONG, or P_MASK.
-		-- threshold is an "anything" union which can contain the 
-		   datatype value.
-		-- behavior is used to define how threshold is used and can
-		   be BL_TH_NONE, BL_TH_VAL_PERCENTAGE, BL_TH_VAL_ABSOLUTE,
-		   or BL_TH_UPDOWN. BL_TH_NONE means don't do anything above
-		   or below the threshold.  BL_TH_VAL_PERCENTAGE treats the
-		   threshold value as a precentage of the maximum possible
-		   value. BL_TH_VAL_ABSOLUTE means that the threshold is an
-		   actual value. BL_TH_UPDOWN means that threshold is not
-		   used, and the two below/above hilite values indicate how
-		   to display something going down (under) or rising (over).		    
-		-- under is the hilite attribute used if value is below the 
-		   threshold. The attribute can be BL_HILITE_NONE, 
-		   BL_HILITE_INVERSE, BL_HILITE_BOLD (-1, -2, or -3), or one 
-		   of the color indexes of CLR_BLACK, CLR_RED, CLR_GREEN, 
-		   CLR_BROWN, CLR_BLUE, CLR_MAGENTA, CLR_CYAN, CLR_GRAY, 
-		   CLR_ORANGE, CLR_BRIGHT_GREEN, CLR_YELLOW, CLR_BRIGHT_BLUE, 
-		   CLR_BRIGHT_MAGENTA, CLR_BRIGHT_CYAN, or CLR_WHITE (0 - 15).
-		-- over is the hilite attribute used if value is at or above 
-		   the threshold. The attribute can be BL_HILITE_NONE, 
-		   BL_HILITE_INVERSE, BL_HILITE_BOLD (-1, -2, or -3), or one 
-		   of the color indexes of CLR_BLACK, CLR_RED, CLR_GREEN, 
-		   CLR_BROWN, CLR_BLUE, CLR_MAGENTA, CLR_CYAN, CLR_GRAY, 
-		   CLR_ORANGE, CLR_BRIGHT_GREEN, CLR_YELLOW, CLR_BRIGHT_BLUE, 
-		   CLR_BRIGHT_MAGENTA, CLR_BRIGHT_CYAN, or CLR_WHITE (0 - 15).
 
 E.  Misc. Routines
 

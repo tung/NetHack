@@ -368,647 +368,192 @@ char *buf;
 #ifdef STATUS_VIA_WINDOWPORT
 /* =======================================================================*/
 
-/* structure that tracks the status details in the core */
-struct istat_s {
-    long time;
-    unsigned anytype;
-    anything a;
-    char *val;
-    int valwidth;
-    enum statusfields idxmax;
-    enum statusfields fld;
-};
+STATIC_DCL void FDECL(add_status_info_cond,
+                      (struct status_info *, const char *));
+STATIC_DCL void FDECL(populate_status_info, (struct status_info *));
 
+static boolean blinit = FALSE;
 
-STATIC_DCL void NDECL(init_blstats);
-STATIC_DCL char *FDECL(anything_to_s, (char *, anything *, int));
-STATIC_OVL int FDECL(percentage, (struct istat_s *, struct istat_s *));
-STATIC_OVL int FDECL(compare_blstats, (struct istat_s *, struct istat_s *));
+STATIC_OVL void
+add_status_info_cond(si, str)
+struct status_info *si;
+const char *str;
+{
+    int i = 0;
+    while (i < SIZE(si->conds) && si->conds[i][0])
+        i++;
+    if (i >= SIZE(si->conds))
+        panic("add_status_info_cond: condition limit exceeded (%d)", i);
+    strncpy(si->conds[i], str, sizeof(si->conds[0]));
+    si->conds[i][sizeof(si->conds[0]) - 1] = '\0';
+}
 
-/* If entries are added to this, botl.h will require updating too */
-STATIC_DCL struct istat_s initblstats[MAXBLSTATS] = {
-    { 0L, ANY_STR,  { (genericptr_t) 0 }, (char *) 0, 80,  0, BL_TITLE},
-    { 0L, ANY_INT,  { (genericptr_t) 0 }, (char *) 0, 10,  0, BL_STR},
-    { 0L, ANY_INT,  { (genericptr_t) 0 }, (char *) 0, 10,  0, BL_DX},
-    { 0L, ANY_INT,  { (genericptr_t) 0 }, (char *) 0, 10,  0, BL_CO},
-    { 0L, ANY_INT,  { (genericptr_t) 0 }, (char *) 0, 10,  0, BL_IN},
-    { 0L, ANY_INT,  { (genericptr_t) 0 }, (char *) 0, 10,  0, BL_WI},
-    { 0L, ANY_INT,  { (genericptr_t) 0 }, (char *) 0, 10,  0, BL_CH},
-    { 0L, ANY_STR,  { (genericptr_t) 0 }, (char *) 0, 40,  0, BL_ALIGN},
-    { 0L, ANY_LONG, { (genericptr_t) 0 }, (char *) 0, 20,  0, BL_SCORE},
-    { 0L, ANY_LONG, { (genericptr_t) 0 }, (char *) 0, 20,  0, BL_CAP},
-    { 0L, ANY_LONG, { (genericptr_t) 0 }, (char *) 0, 30,  0, BL_GOLD},
-    { 0L, ANY_INT,  { (genericptr_t) 0 }, (char *) 0, 10,  BL_ENEMAX, BL_ENE},
-    { 0L, ANY_INT,  { (genericptr_t) 0 }, (char *) 0, 10,  0, BL_ENEMAX},
-    { 0L, ANY_LONG, { (genericptr_t) 0 }, (char *) 0, 10,  0, BL_XP},
-    { 0L, ANY_INT,  { (genericptr_t) 0 }, (char *) 0, 10,  0, BL_AC},
-    { 0L, ANY_INT,  { (genericptr_t) 0 }, (char *) 0, 10,  0, BL_HD},
-    { 0L, ANY_INT,  { (genericptr_t) 0 }, (char *) 0, 20,  0, BL_TIME},
-    { 0L, ANY_UINT, { (genericptr_t) 0 }, (char *) 0, 40,  0, BL_HUNGER},
-    { 0L, ANY_INT,  { (genericptr_t) 0 }, (char *) 0, 10,  BL_HPMAX, BL_HP},
-    { 0L, ANY_INT,  { (genericptr_t) 0 }, (char *) 0, 10,  0, BL_HPMAX},
-    { 0L, ANY_STR,  { (genericptr_t) 0 }, (char *) 0, 80,  0, BL_LEVELDESC},
-    { 0L, ANY_LONG, { (genericptr_t) 0 }, (char *) 0, 20,  0, BL_EXP},
-    { 0L, ANY_MASK32,
-                    { (genericptr_t) 0 }, (char *) 0,  0,  0, BL_CONDITION}
-};
+STATIC_OVL void
+populate_status_info(si)
+struct status_info *si;
+{
+    char buf[BUFSZ];
+    int i, cap;
 
-struct istat_s blstats[2][MAXBLSTATS];
-static boolean blinit = FALSE, update_all = FALSE;
+    /*
+     *  Player name and title.
+     */
+    strncpy(si->name, plname, sizeof(si->name));
+    si->name[sizeof(si->name) - 1] = '\0';
+    si->name[0] = highc(si->name[0]);
+
+    if (Upolyd) {
+        strncpy(si->title, mons[u.umonnum].mname, sizeof(si->title));
+        si->title[sizeof(si->title) - 1] = '\0';
+        for (i = 0; si->title[i]; i++)
+            if (i == 0 || si->title[i - 1] == ' ')
+                si->title[i] = highc(si->title[i]);
+    } else {
+        strncpy(si->title, rank(), sizeof(si->title));
+        si->title[sizeof(si->title) - 1] = '\0';
+    }
+
+    /* Strength */
+    if (ACURR(A_STR) > STR18(100)) {
+        si->st = ACURR(A_STR) - 100;
+        si->st_extra = 0;
+    } else if (ACURR(A_STR) > 18 && ACURR(A_STR) <= STR18(100)) {
+        si->st = 18;
+        si->st_extra = ACURR(A_STR) - 18;
+    } else {
+        si->st = ACURR(A_STR);
+        si->st_extra = 0;
+    }
+
+    /*  Dexterity, constitution, intelligence, wisdom, charisma. */
+    si->dx = ACURR(A_DEX);
+    si->co = ACURR(A_CON);
+    si->in = ACURR(A_INT);
+    si->wi = ACURR(A_WIS);
+    si->ch = ACURR(A_CHA);
+
+    /* Alignment */
+    if (u.ualign.type == A_CHAOTIC) {
+        Strcpy(si->align, "Chaotic");
+    } else if (u.ualign.type == A_NEUTRAL) {
+        Strcpy(si->align, "Neutral");
+    } else {
+        Strcpy(si->align, "Lawful");
+    }
+
+    /* Score */
+#ifdef SCORE_ON_BOTL
+    si->score = botl_score();
+#else
+    si->score = 0;
+#endif
+
+    /*  Dungeon level. */
+    describe_level(buf);
+    mungspaces(buf);
+    strncpy(si->dlvl, buf, sizeof(si->dlvl));
+    si->dlvl[sizeof(si->dlvl) - 1] = '\0';
+
+    /* Gold */
+    strncpy(si->gold_sym, encglyph(objnum_to_glyph(GOLD_PIECE)),
+            sizeof(si->gold_sym));
+    si->gold_sym[sizeof(si->gold_sym) - 1] = '\0';
+    si->gold = money_cnt(invent);
+
+    /*  Hit points  */
+    if (Upolyd) {
+        si->hp = u.mh;
+        si->hp_max = u.mhmax;
+    } else {
+        si->hp = u.uhp;
+        si->hp_max = u.uhpmax;
+    }
+
+    /* Power (magical energy) */
+    si->pw = u.uen;
+    si->pw_max = u.uenmax;
+
+    /* Armor class */
+    si->ac = u.uac;
+
+    /* Experience */
+    if (Upolyd) {
+        Strcpy(si->exp_label, "HD");
+        si->exp_level = mons[u.umonnum].mlevel;
+        si->exp_points = 0;
+    } else {
+        Strcpy(si->exp_label, "Xp");
+        si->exp_level = u.ulevel;
+        si->exp_points = u.uexp;
+    }
+
+    /* Time (moves) */
+    si->turns = moves;
+
+    /* Conditions */
+    memset(si->conds, 0, sizeof(si->conds));
+    if (hu_stat[u.uhs][0] && hu_stat[u.uhs][0] != ' ') {
+        Strcpy(buf, hu_stat[u.uhs]);
+        mungspaces(buf);
+        add_status_info_cond(si, buf);
+    }
+    if (Confusion)
+        add_status_info_cond(si, "Conf");
+    if (Sick && (u.usick_type & SICK_VOMITABLE))
+        add_status_info_cond(si, "FoodPois");
+    if (Sick && (u.usick_type & SICK_NONVOMITABLE))
+        add_status_info_cond(si, "Ill");
+    if (Blind)
+        add_status_info_cond(si, "Blind");
+    if (Stunned)
+        add_status_info_cond(si, "Stun");
+    if (Hallucination)
+        add_status_info_cond(si, "Hallu");
+    if (Slimed)
+        add_status_info_cond(si, "Slime");
+    cap = near_capacity();
+    if (cap > UNENCUMBERED)
+        add_status_info_cond(si, enc_stat[cap]);
+
+#ifdef SCORE_ON_BOTL
+    si->show_score = flags.showscore;
+#else
+    si->show_score = FALSE;
+#endif
+    si->show_exp_points = !Upolyd && flags.showexp;
+    si->show_turns = flags.time;
+}
 
 void
 bot()
 {
-    char buf[BUFSZ];
-    register char *nb;
-    static int idx = 0, idx_p, idxmax;
-    unsigned anytype;
-    long money;
-    int i, pc, chg, cap;
-    struct istat_s *curr, *prev;
-    boolean valset[MAXBLSTATS], chgval = FALSE, updated = FALSE;
+    struct status_info si;
 
     if (!blinit)
         panic("bot before init.");
     if (!youmonst.data) {
         context.botl = context.botlx = 0;
-        update_all = FALSE;
         return;
     }
 
-    idx_p = idx;
-    idx = 1 - idx; /* 0 -> 1, 1 -> 0 */
-
-    /* clear the "value set" indicators */
-    (void) memset((genericptr_t) valset, 0, MAXBLSTATS * sizeof (boolean));
-
-    /*
-     * Note: min(x,9999) - we enforce the same maximum on hp, maxhp,
-     * pw, maxpw, and gold as basic status formatting so that the two
-     * modes of status display don't produce different information.
-     */
-
-    /*
-     *  Player name and title.
-     */
-    Strcpy(nb = buf, plname);
-    nb[0] = highc(nb[0]);
-    nb[10] = '\0';
-    Sprintf(nb = eos(nb), " the ");
-    if (Upolyd) {
-        for (i = 0, nb = strcpy(eos(nb), mons[u.umonnum].mname); nb[i]; i++)
-            if (i == 0 || nb[i - 1] == ' ')
-                nb[i] = highc(nb[i]);
-    } else
-        Strcpy(nb = eos(nb), rank());
-    Sprintf(blstats[idx][BL_TITLE].val, "%-29s", buf);
-    valset[BL_TITLE] = TRUE; /* indicate val already set */
-
-    /* Strength */
-    buf[0] = '\0';
-    blstats[idx][BL_STR].a.a_int = ACURR(A_STR);
-    if (ACURR(A_STR) > 18) {
-        if (ACURR(A_STR) > STR18(100))
-            Sprintf(buf, "%2d", ACURR(A_STR) - 100);
-        else if (ACURR(A_STR) < STR18(100))
-            Sprintf(buf, "18/%02d", ACURR(A_STR) - 18);
-        else
-            Sprintf(buf, "18/**");
-    } else
-        Sprintf(buf, "%-1d", ACURR(A_STR));
-    Strcpy(blstats[idx][BL_STR].val, buf);
-    valset[BL_STR] = TRUE; /* indicate val already set */
-
-    /*  Dexterity, constitution, intelligence, wisdom, charisma. */
-    blstats[idx][BL_DX].a.a_int = ACURR(A_DEX);
-    blstats[idx][BL_CO].a.a_int = ACURR(A_CON);
-    blstats[idx][BL_IN].a.a_int = ACURR(A_INT);
-    blstats[idx][BL_WI].a.a_int = ACURR(A_WIS);
-    blstats[idx][BL_CH].a.a_int = ACURR(A_CHA);
-
-    /* Alignment */
-    Strcpy(blstats[idx][BL_ALIGN].val, (u.ualign.type == A_CHAOTIC)
-                                          ? "Chaotic"
-                                          : (u.ualign.type == A_NEUTRAL)
-                                               ? "Neutral"
-                                               : "Lawful");
-
-    /* Score */
-    blstats[idx][BL_SCORE].a.a_long =
-#ifdef SCORE_ON_BOTL
-        botl_score()
-#else
-        0L
-#endif
-        ;
-
-    /*  Hit points  */
-    i = Upolyd ? u.mh : u.uhp;
-    if (i < 0)
-        i = 0;
-    blstats[idx][BL_HP].a.a_int = min(i, 9999);
-    i = Upolyd ? u.mhmax : u.uhpmax;
-    blstats[idx][BL_HPMAX].a.a_int = min(i, 9999);
-
-    /*  Dungeon level. */
-    (void) describe_level(blstats[idx][BL_LEVELDESC].val);
-    valset[BL_LEVELDESC] = TRUE; /* indicate val already set */
-
-    /* Gold */
-    if ((money = money_cnt(invent)) < 0L)
-        money = 0L; /* ought to issue impossible() and then discard gold */
-    blstats[idx][BL_GOLD].a.a_long = min(money, 999999L);
-    /*
-     * The tty port needs to display the current symbol for gold
-     * as a field header, so to accommodate that we pass gold with
-     * that already included. If a window port needs to use the text
-     * gold amount without the leading "$:" the port will have to
-     * skip past ':' to the value pointer it was passed in status_update()
-     * for the BL_GOLD case.
-     *
-     * Another quirk of BL_GOLD is that the field display may have
-     * changed if a new symbol set was loaded, or we entered or left
-     * the rogue level.
-     *
-     * The currency prefix is encoded as ten character \GXXXXNNNN
-     * sequence.
-     */
-    Sprintf(blstats[idx][BL_GOLD].val, "%s:%ld",
-            encglyph(objnum_to_glyph(GOLD_PIECE)),
-            blstats[idx][BL_GOLD].a.a_long);
-    valset[BL_GOLD] = TRUE; /* indicate val already set */
-
-    /* Power (magical energy) */
-    blstats[idx][BL_ENE].a.a_int = min(u.uen, 9999);
-    blstats[idx][BL_ENEMAX].a.a_int = min(u.uenmax, 9999);
-
-    /* Armor class */
-    blstats[idx][BL_AC].a.a_int = u.uac;
-
-    /* Monster level (if Upolyd) */
-    blstats[idx][BL_HD].a.a_int = Upolyd ? mons[u.umonnum].mlevel : 0;
-
-    /* Experience */
-    blstats[idx][BL_XP].a.a_int = u.ulevel;
-    blstats[idx][BL_EXP].a.a_int = u.uexp;
-
-    /* Time (moves) */
-    blstats[idx][BL_TIME].a.a_long = moves;
-
-    /* Hunger */
-    blstats[idx][BL_HUNGER].a.a_uint = u.uhs;
-    Strcpy(blstats[idx][BL_HUNGER].val,
-           (u.uhs != NOT_HUNGRY) ? hu_stat[u.uhs] : "");
-    valset[BL_HUNGER] = TRUE;
-
-    /* Carrying capacity */
-    cap = near_capacity();
-    blstats[idx][BL_CAP].a.a_int = cap;
-    Strcpy(blstats[idx][BL_CAP].val,
-           (cap > UNENCUMBERED) ? enc_stat[cap] : "");
-    valset[BL_CAP] = TRUE;
-
-    /* Conditions */
-    blstats[idx][BL_CONDITION].a.a_ulong = 0L;
-    if (Stoned)
-        blstats[idx][BL_CONDITION].a.a_ulong |= BL_MASK_STONE;
-    if (Slimed)
-        blstats[idx][BL_CONDITION].a.a_ulong |= BL_MASK_SLIME;
-    if (Strangled)
-        blstats[idx][BL_CONDITION].a.a_ulong |= BL_MASK_STRNGL;
-    if (Sick && (u.usick_type & SICK_VOMITABLE) != 0)
-        blstats[idx][BL_CONDITION].a.a_ulong |= BL_MASK_FOODPOIS;
-    if (Sick && (u.usick_type & SICK_NONVOMITABLE) != 0)
-        blstats[idx][BL_CONDITION].a.a_ulong |= BL_MASK_TERMILL;
-    /*
-     * basic formatting puts hunger status and encumbrance here
-     */
-    if (Blind)
-        blstats[idx][BL_CONDITION].a.a_ulong |= BL_MASK_BLIND;
-    if (Deaf)
-        blstats[idx][BL_CONDITION].a.a_ulong |= BL_MASK_DEAF;
-    if (Stunned)
-        blstats[idx][BL_CONDITION].a.a_ulong |= BL_MASK_STUN;
-    if (Confusion)
-        blstats[idx][BL_CONDITION].a.a_ulong |= BL_MASK_CONF;
-    if (Hallucination)
-        blstats[idx][BL_CONDITION].a.a_ulong |= BL_MASK_HALLU;
-    /* levitation and flying are mututally exclusive */
-    if (Levitation)
-        blstats[idx][BL_CONDITION].a.a_ulong |= BL_MASK_LEV;
-    if (Flying)
-        blstats[idx][BL_CONDITION].a.a_ulong |= BL_MASK_FLY;
-    if (u.usteed)
-        blstats[idx][BL_CONDITION].a.a_ulong |= BL_MASK_RIDE;
-
-    /*
-     *  Now pass the changed values to window port.
-     */
-    for (i = 0; i < MAXBLSTATS; i++) {
-        if (((i == BL_SCORE) && !flags.showscore)
-            || ((i == BL_EXP) && !flags.showexp)
-            || ((i == BL_TIME) && !flags.time)
-            || ((i == BL_HD) && !Upolyd)
-            || ((i == BL_XP || i == BL_EXP) && Upolyd))
-            continue;
-        anytype = blstats[idx][i].anytype;
-        curr = &blstats[idx][i];
-        prev = &blstats[idx_p][i];
-        chg = 0;
-        if (update_all
-            || ((chg = compare_blstats(prev, curr)) != 0)
-            || ((chgval = (valset[i]
-                           && strcmp(blstats[idx][i].val,
-                                     blstats[idx_p][i].val))) != 0)) {
-            idxmax = blstats[idx][i].idxmax;
-            pc = (idxmax) ? percentage(curr, &blstats[idx][idxmax]) : 0;
-            if (!valset[i])
-                (void) anything_to_s(curr->val, &curr->a, anytype);
-            if (anytype != ANY_MASK32) {
-                status_update(i, (genericptr_t) curr->val,
-                              valset[i] ? chgval : chg, pc);
-            } else {
-                /* send pointer to mask */
-                status_update(i, (genericptr_t) &curr->a.a_ulong, chg, 0);
-            }
-            updated = TRUE;
-        }
-    }
-    /*
-     * It is possible to get here, with nothing having been pushed
-     * to the window port, when none of the info has changed. In that
-     * case, we need to force a call to status_update() when
-     * context.botlx is set. The tty port in particular has a problem
-     * if that isn't done, since it sets context.botlx when a menu or
-     * text display obliterates the status line.
-     *
-     * To work around it, we call status_update() with fictitious
-     * index of BL_FLUSH (-1).
-     */
-    if ((context.botlx && !updated)
-        || windowprocs.win_status_update == genl_status_update)
-        status_update(BL_FLUSH, (genericptr_t) 0, 0, 0);
+    populate_status_info(&si);
+    status_update(&si);
 
     context.botl = context.botlx = 0;
-    update_all = FALSE;
 }
 
 void
-status_initialize(reassessment)
-boolean
-    reassessment; /* TRUE = just reassess fields w/o other initialization*/
+status_initialize()
 {
-    int i;
-    const char *fieldfmt = (const char *) 0;
-    const char *fieldname = (const char *) 0;
-
-    if (!reassessment) {
-        init_blstats();
-        (*windowprocs.win_status_init)();
-        blinit = TRUE;
-    }
-    for (i = 0; i < MAXBLSTATS; ++i) {
-        enum statusfields fld = initblstats[i].fld;
-
-        switch (fld) {
-        case BL_TITLE:
-            fieldfmt = "%s";
-            fieldname = "title";
-            status_enablefield(fld, fieldname, fieldfmt, TRUE);
-            break;
-        case BL_STR:
-            fieldfmt = " St:%s";
-            fieldname = "strength";
-            status_enablefield(fld, fieldname, fieldfmt, TRUE);
-            break;
-        case BL_DX:
-            fieldfmt = " Dx:%s";
-            fieldname = "dexterity";
-            status_enablefield(fld, fieldname, fieldfmt, TRUE);
-            break;
-        case BL_CO:
-            fieldfmt = " Co:%s";
-            fieldname = "constitution";
-            status_enablefield(fld, fieldname, fieldfmt, TRUE);
-            break;
-        case BL_IN:
-            fieldfmt = " In:%s";
-            fieldname = "intelligence";
-            status_enablefield(fld, fieldname, fieldfmt, TRUE);
-            break;
-        case BL_WI:
-            fieldfmt = " Wi:%s";
-            fieldname = "wisdom";
-            status_enablefield(fld, fieldname, fieldfmt, TRUE);
-            break;
-        case BL_CH:
-            fieldfmt = " Ch:%s";
-            fieldname = "charisma";
-            status_enablefield(fld, fieldname, fieldfmt, TRUE);
-            break;
-        case BL_ALIGN:
-            fieldfmt = " %s";
-            fieldname = "alignment";
-            status_enablefield(fld, fieldname, fieldfmt, TRUE);
-            break;
-        case BL_SCORE:
-            fieldfmt = " S:%s";
-            fieldname = "score";
-            status_enablefield(fld, fieldname, fieldfmt,
-                               (!flags.showscore) ? FALSE : TRUE);
-            break;
-        case BL_CAP:
-            fieldfmt = " %s";
-            fieldname = "carrying-capacity";
-            status_enablefield(fld, fieldname, fieldfmt, TRUE);
-            break;
-        case BL_GOLD:
-            fieldfmt = " %s";
-            fieldname = "gold";
-            status_enablefield(fld, fieldname, fieldfmt, TRUE);
-            break;
-        case BL_ENE:
-            fieldfmt = " Pw:%s";
-            fieldname = "power";
-            status_enablefield(fld, fieldname, fieldfmt, TRUE);
-            break;
-        case BL_ENEMAX:
-            fieldfmt = "(%s)";
-            fieldname = "power-max";
-            status_enablefield(fld, fieldname, fieldfmt, TRUE);
-            break;
-        case BL_XP:
-            fieldfmt = " Xp:%s";
-            fieldname = "experience-level";
-            status_enablefield(fld, fieldname, fieldfmt,
-                                   (Upolyd) ? FALSE : TRUE);
-            break;
-        case BL_AC:
-            fieldfmt = " AC:%s";
-            fieldname = "armor-class";
-            status_enablefield(fld, fieldname, fieldfmt, TRUE);
-            break;
-        case BL_HD:
-            fieldfmt = " HD:%s";
-            fieldname = "HD";
-            status_enablefield(fld, fieldname, fieldfmt,
-                                   (!Upolyd) ? FALSE : TRUE);
-            break;
-        case BL_TIME:
-            fieldfmt = " T:%s";
-            fieldname = "time";
-            status_enablefield(fld, fieldname, fieldfmt,
-                                   (!flags.time) ? FALSE : TRUE);
-            break;
-        case BL_HUNGER:
-            fieldfmt = " %s";
-            fieldname = "hunger";
-            status_enablefield(fld, fieldname, fieldfmt, TRUE);
-            break;
-        case BL_HP:
-            fieldfmt = " HP:%s";
-            fieldname = "hitpoints";
-            status_enablefield(fld, fieldname, fieldfmt, TRUE);
-            break;
-        case BL_HPMAX:
-            fieldfmt = "(%s)";
-            fieldname = "hitpoint-max";
-            status_enablefield(fld, fieldname, fieldfmt, TRUE);
-            break;
-        case BL_LEVELDESC:
-            fieldfmt = "%s";
-            fieldname = "dungeon-level";
-            status_enablefield(fld, fieldname, fieldfmt, TRUE);
-            break;
-        case BL_EXP:
-            fieldfmt = "/%s";
-            fieldname = "experience";
-            status_enablefield(fld, fieldname, fieldfmt,
-                                  (!flags.showexp || Upolyd) ? FALSE : TRUE);
-            break;
-        case BL_CONDITION:
-            fieldfmt = "%s";
-            fieldname = "condition";
-            status_enablefield(fld, fieldname, fieldfmt, TRUE);
-            break;
-        case BL_FLUSH:
-        default:
-            break;
-        }
-    }
-    update_all = TRUE;
+    (*windowprocs.win_status_init)();
+    blinit = TRUE;
 }
 
 void
 status_finish()
 {
-    int i;
-
-    /* call the window port cleanup routine first */
+    /* call the window port cleanup routine */
     (*windowprocs.win_status_finish)();
-
-    /* free memory that we alloc'd now */
-    for (i = 0; i < MAXBLSTATS; ++i) {
-        if (blstats[0][i].val)
-            free((genericptr_t) blstats[0][i].val);
-        if (blstats[1][i].val)
-            free((genericptr_t) blstats[1][i].val);
-    }
-}
-
-STATIC_OVL void
-init_blstats()
-{
-    static boolean initalready = FALSE;
-    int i, j;
-
-    if (initalready) {
-        impossible("init_blstats called more than once.");
-        return;
-    }
-
-    initalready = TRUE;
-    for (i = BEFORE; i <= NOW; ++i) {
-        for (j = 0; j < MAXBLSTATS; ++j) {
-            blstats[i][j] = initblstats[j];
-            blstats[i][j].a = zeroany;
-            if (blstats[i][j].valwidth) {
-                blstats[i][j].val = (char *) alloc(blstats[i][j].valwidth);
-                blstats[i][j].val[0] = '\0';
-            } else
-                blstats[i][j].val = (char *) 0;
-        }
-    }
-}
-
-STATIC_OVL char *
-anything_to_s(buf, a, anytype)
-char *buf;
-anything *a;
-int anytype;
-{
-    if (!buf)
-        return (char *) 0;
-
-    switch (anytype) {
-    case ANY_ULONG:
-        Sprintf(buf, "%lu", a->a_ulong);
-        break;
-    case ANY_MASK32:
-        Sprintf(buf, "%lx", a->a_ulong);
-        break;
-    case ANY_LONG:
-        Sprintf(buf, "%ld", a->a_long);
-        break;
-    case ANY_INT:
-        Sprintf(buf, "%d", a->a_int);
-        break;
-    case ANY_UINT:
-        Sprintf(buf, "%u", a->a_uint);
-        break;
-    case ANY_IPTR:
-        Sprintf(buf, "%d", *a->a_iptr);
-        break;
-    case ANY_LPTR:
-        Sprintf(buf, "%ld", *a->a_lptr);
-        break;
-    case ANY_ULPTR:
-        Sprintf(buf, "%lu", *a->a_ulptr);
-        break;
-    case ANY_UPTR:
-        Sprintf(buf, "%u", *a->a_uptr);
-        break;
-    case ANY_STR: /* do nothing */
-        ;
-        break;
-    default:
-        buf[0] = '\0';
-    }
-    return buf;
-}
-
-STATIC_OVL int
-compare_blstats(bl1, bl2)
-struct istat_s *bl1, *bl2;
-{
-    int anytype, result = 0;
-
-    if (!bl1 || !bl2) {
-        panic("compare_blstat: bad istat pointer %s, %s",
-              fmt_ptr((genericptr_t) bl1), fmt_ptr((genericptr_t) bl2));
-    }
-
-    anytype = bl1->anytype;
-    if ((!bl1->a.a_void || !bl2->a.a_void)
-        && (anytype == ANY_IPTR || anytype == ANY_UPTR || anytype == ANY_LPTR
-            || anytype == ANY_ULPTR)) {
-        panic("compare_blstat: invalid pointer %s, %s",
-              fmt_ptr((genericptr_t) bl1->a.a_void),
-              fmt_ptr((genericptr_t) bl2->a.a_void));
-    }
-
-    switch (anytype) {
-    case ANY_INT:
-        result = (bl1->a.a_int < bl2->a.a_int)
-                     ? 1
-                     : (bl1->a.a_int > bl2->a.a_int) ? -1 : 0;
-        break;
-    case ANY_IPTR:
-        result = (*bl1->a.a_iptr < *bl2->a.a_iptr)
-                     ? 1
-                     : (*bl1->a.a_iptr > *bl2->a.a_iptr) ? -1 : 0;
-        break;
-    case ANY_LONG:
-        result = (bl1->a.a_long < bl2->a.a_long)
-                     ? 1
-                     : (bl1->a.a_long > bl2->a.a_long) ? -1 : 0;
-        break;
-    case ANY_LPTR:
-        result = (*bl1->a.a_lptr < *bl2->a.a_lptr)
-                     ? 1
-                     : (*bl1->a.a_lptr > *bl2->a.a_lptr) ? -1 : 0;
-        break;
-    case ANY_UINT:
-        result = (bl1->a.a_uint < bl2->a.a_uint)
-                     ? 1
-                     : (bl1->a.a_uint > bl2->a.a_uint) ? -1 : 0;
-        break;
-    case ANY_UPTR:
-        result = (*bl1->a.a_uptr < *bl2->a.a_uptr)
-                     ? 1
-                     : (*bl1->a.a_uptr > *bl2->a.a_uptr) ? -1 : 0;
-        break;
-    case ANY_ULONG:
-        result = (bl1->a.a_ulong < bl2->a.a_ulong)
-                     ? 1
-                     : (bl1->a.a_ulong > bl2->a.a_ulong) ? -1 : 0;
-        break;
-    case ANY_ULPTR:
-        result = (*bl1->a.a_ulptr < *bl2->a.a_ulptr)
-                     ? 1
-                     : (*bl1->a.a_ulptr > *bl2->a.a_ulptr) ? -1 : 0;
-        break;
-    case ANY_STR:
-        if (strcmp(bl1->val, bl2->val) == 0)
-            result = 0;
-        else
-            result = 1;
-        break;
-    case ANY_MASK32:
-        if (bl1->a.a_ulong == bl2->a.a_ulong)
-            result = 0;
-        else
-            result = 1;
-        break;
-    default:
-        result = 1;
-    }
-    return result;
-}
-
-STATIC_OVL int
-percentage(bl, maxbl)
-struct istat_s *bl, *maxbl;
-{
-    int result = 0;
-    int anytype;
-
-    if (!bl || !maxbl) {
-        impossible("percentage: bad istat pointer %s, %s",
-                   fmt_ptr((genericptr_t) bl), fmt_ptr((genericptr_t) maxbl));
-        return 0;
-    }
-
-    anytype = bl->anytype;
-    if (maxbl->a.a_void) {
-        switch (anytype) {
-        case ANY_INT:
-            result = ((100 * bl->a.a_int) / maxbl->a.a_int);
-            break;
-        case ANY_LONG:
-            result = (int) ((100L * bl->a.a_long) / maxbl->a.a_long);
-            break;
-        case ANY_UINT:
-            result = (int) ((100U * bl->a.a_uint) / maxbl->a.a_uint);
-            break;
-        case ANY_ULONG:
-            result = (int) ((100UL * bl->a.a_ulong) / maxbl->a.a_ulong);
-            break;
-        case ANY_IPTR:
-            result = ((100 * (*bl->a.a_iptr)) / (*maxbl->a.a_iptr));
-            break;
-        case ANY_LPTR:
-            result = (int) ((100L * (*bl->a.a_lptr)) / (*maxbl->a.a_lptr));
-            break;
-        case ANY_UPTR:
-            result = (int) ((100U * (*bl->a.a_uptr)) / (*maxbl->a.a_uptr));
-            break;
-        case ANY_ULPTR:
-            result = (int) ((100UL * (*bl->a.a_ulptr)) / (*maxbl->a.a_ulptr));
-            break;
-        }
-    }
-    return result;
 }
 
 #endif /*STATUS_VIA_WINDOWPORT*/

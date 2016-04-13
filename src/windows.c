@@ -460,7 +460,7 @@ static short FDECL(hup_set_font_name, (winid, char *));
 static char *NDECL(hup_get_color_string);
 #endif /* CHANGE_COLOR */
 #ifdef STATUS_VIA_WINDOWPORT
-static void FDECL(hup_status_update, (int, genericptr_t, int, int));
+static void FDECL(hup_status_update, (const struct status_info *));
 #endif
 
 static int NDECL(hup_int_ndecl);
@@ -514,7 +514,7 @@ static struct window_procs hup_procs = {
 #ifdef STATUS_VIA_WINDOWPORT
     hup_void_ndecl,                                   /* status_init */
     hup_void_ndecl,                                   /* status_finish */
-    genl_status_enablefield, hup_status_update,
+    hup_status_update,
 #endif /* STATUS_VIA_WINDOWPORT */
     genl_can_suspend_no,
 };
@@ -747,10 +747,8 @@ hup_get_color_string(VOID_ARGS)
 #ifdef STATUS_VIA_WINDOWPORT
 /*ARGSUSED*/
 static void
-hup_status_update(idx, ptr, chg, percent)
-int idx UNUSED;
-genericptr_t ptr UNUSED;
-int chg UNUSED, percent UNUSED;
+hup_status_update(si)
+const struct status_info *si UNUSED;
 {
     return;
 }
@@ -804,23 +802,11 @@ const char *string UNUSED;
 /* genl backward compat stuff                                               */
 /****************************************************************************/
 
-const char *status_fieldnm[MAXBLSTATS];
-const char *status_fieldfmt[MAXBLSTATS];
-char *status_vals[MAXBLSTATS];
-boolean status_activefields[MAXBLSTATS];
 NEARDATA winid WIN_STATUS;
 
 void
 genl_status_init()
 {
-    int i;
-
-    for (i = 0; i < MAXBLSTATS; ++i) {
-        status_vals[i] = (char *) alloc(MAXCO);
-        *status_vals[i] = '\0';
-        status_activefields[i] = FALSE;
-        status_fieldfmt[i] = (const char *) 0;
-    }
     /* Use a window for the genl version; backward port compatibility */
     WIN_STATUS = create_nhwindow(NHW_STATUS);
     display_nhwindow(WIN_STATUS, FALSE);
@@ -829,188 +815,59 @@ genl_status_init()
 void
 genl_status_finish()
 {
-    /* tear down routine */
-    int i;
-
-    /* free alloc'd memory here */
-    for (i = 0; i < MAXBLSTATS; ++i) {
-        if (status_vals[i])
-            free((genericptr_t) status_vals[i]), status_vals[i] = (char *) 0;
-    }
+    return;
 }
 
 void
-genl_status_enablefield(fieldidx, nm, fmt, enable)
-int fieldidx;
-const char *nm;
-const char *fmt;
-boolean enable;
-{
-    status_fieldfmt[fieldidx] = fmt;
-    status_fieldnm[fieldidx] = nm;
-    status_activefields[fieldidx] = enable;
-}
-
-/* call once for each field, then call with BL_FLUSH to output the result */
-void
-genl_status_update(idx, ptr, chg, percent)
-int idx;
-genericptr_t ptr;
-int chg UNUSED, percent UNUSED;
+genl_status_update(si)
+const struct status_info *si;
 {
     char newbot1[MAXCO], newbot2[MAXCO];
-    long cond, *condptr = (long *) ptr;
-    register int i;
-    unsigned pass, lndelta;
-    enum statusfields idx1, idx2, *fieldlist;
-    char *nb, *text = (char *) ptr;
+    char *nb;
+    int len, i;
 
-    static enum statusfields fieldorder[][15] = {
-        /* line one */
-        { BL_TITLE, BL_STR, BL_DX, BL_CO, BL_IN, BL_WI, BL_CH, BL_ALIGN,
-          BL_SCORE, BL_FLUSH, BL_FLUSH, BL_FLUSH, BL_FLUSH, BL_FLUSH,
-          BL_FLUSH },
-        /* line two, default order */
-        { BL_LEVELDESC, BL_GOLD,
-          BL_HP, BL_HPMAX, BL_ENE, BL_ENEMAX, BL_AC,
-          BL_XP, BL_EXP, BL_HD,
-          BL_TIME,
-          BL_HUNGER, BL_CAP, BL_CONDITION,
-          BL_FLUSH },
-        /* move time to the end */
-        { BL_LEVELDESC, BL_GOLD,
-          BL_HP, BL_HPMAX, BL_ENE, BL_ENEMAX, BL_AC,
-          BL_XP, BL_EXP, BL_HD,
-          BL_HUNGER, BL_CAP, BL_CONDITION,
-          BL_TIME, BL_FLUSH },
-        /* move experience and time to the end */
-        { BL_LEVELDESC, BL_GOLD,
-          BL_HP, BL_HPMAX, BL_ENE, BL_ENEMAX, BL_AC,
-          BL_HUNGER, BL_CAP, BL_CONDITION,
-          BL_XP, BL_EXP, BL_HD, BL_TIME, BL_FLUSH },
-        /* move level description plus gold and experience and time to end */
-        { BL_HP, BL_HPMAX, BL_ENE, BL_ENEMAX, BL_AC,
-          BL_HUNGER, BL_CAP, BL_CONDITION,
-          BL_LEVELDESC, BL_GOLD, BL_XP, BL_EXP, BL_HD, BL_TIME, BL_FLUSH },
-    };
-
-    if (idx != BL_FLUSH) {
-        if (!status_activefields[idx])
-            return;
-        switch (idx) {
-        case BL_CONDITION:
-            cond = *condptr;
-            nb = status_vals[idx];
-            *nb = '\0';
-            if (cond & BL_MASK_STONE)
-                Strcpy(nb = eos(nb), " Stone");
-            if (cond & BL_MASK_SLIME)
-                Strcpy(nb = eos(nb), " Slime");
-            if (cond & BL_MASK_STRNGL)
-                Strcpy(nb = eos(nb), " Strngl");
-            if (cond & BL_MASK_FOODPOIS)
-                Strcpy(nb = eos(nb), " FoodPois");
-            if (cond & BL_MASK_TERMILL)
-                Strcpy(nb = eos(nb), " TermIll");
-            if (cond & BL_MASK_BLIND)
-                Strcpy(nb = eos(nb), " Blind");
-            if (cond & BL_MASK_DEAF)
-                Strcpy(nb = eos(nb), " Deaf");
-            if (cond & BL_MASK_STUN)
-                Strcpy(nb = eos(nb), " Stun");
-            if (cond & BL_MASK_CONF)
-                Strcpy(nb = eos(nb), " Conf");
-            if (cond & BL_MASK_HALLU)
-                Strcpy(nb = eos(nb), " Hallu");
-            if (cond & BL_MASK_LEV)
-                Strcpy(nb = eos(nb), " Lev");
-            if (cond & BL_MASK_FLY)
-                Strcpy(nb = eos(nb), " Fly");
-            if (cond & BL_MASK_RIDE)
-                Strcpy(nb = eos(nb), " Ride");
-            break;
-        default:
-            Sprintf(status_vals[idx],
-                    status_fieldfmt[idx] ? status_fieldfmt[idx] : "%s", text);
-            break;
-        }
-        return; /* processed one field other than BL_FLUSH */
-    } /* (idx != BL_FLUSH) */
-
-    /* We've received BL_FLUSH; time to output the gathered data */
+    /* first row */
+    newbot1[0] = '\0';
     nb = newbot1;
-    *nb = '\0';
-    for (i = 0; (idx1 = fieldorder[0][i]) != BL_FLUSH; ++i) {
-        if (status_activefields[idx1])
-            Strcpy(nb = eos(nb), status_vals[idx1]);
+
+    /* Grant 32 characters for the name and title. */
+    Sprintf(nb = eos(nb), "%s the %s", si->name, si->title);
+    len = strlen(si->name) + 5 + strlen(si->title);
+    if (len < 32)
+        Sprintf(nb = eos(nb), "%*s", 32 - len, " ");
+
+    Sprintf(nb = eos(nb), "St:%d", si->st);
+    if (si->st_extra > 99) {
+        Sprintf(nb = eos(nb), "/**");
+    } else if (si->st_extra > 0) {
+        Sprintf(nb = eos(nb), "/%02d", si->st_extra);
     }
-    /* if '$' is encoded, buffer length of \GXXXXNNNN is 9 greater than
-       single char; we want to subtract that 9 when checking display length */
-    lndelta = (status_activefields[BL_GOLD]
-               && strstr(status_vals[BL_GOLD], "\\G")) ? 9 : 0;
-    /* basic bot2 formats groups of second line fields into five buffers,
-       then decides how to order those buffers based on comparing lengths
-       of [sub]sets of them to the width of the map; we have more control
-       here but currently emulate that behavior */
-    for (pass = 1; pass <= 4; pass++) {
-        fieldlist = fieldorder[pass];
-        nb = newbot2;
-        *nb = '\0';
-        for (i = 0; (idx2 = fieldlist[i]) != BL_FLUSH; ++i) {
-            if (status_activefields[idx2]) {
-                const char *val = status_vals[idx2];
+    Sprintf(nb = eos(nb), " Dx:%d Co:%d In:%d Wi:%d Ch:%d",
+            si->dx, si->co, si->in, si->wi, si->ch);
+    Sprintf(nb = eos(nb), "  %s", si->align);
+    if (si->show_score)
+        Sprintf(nb = eos(nb), " S:%ld", si->score);
 
-                switch (idx2) {
-                case BL_HP: /* for pass 4, Hp comes first; mungspaces()
-                               will strip the unwanted leading spaces */
-                case BL_XP: case BL_HD:
-                case BL_TIME:
-                    Strcpy(nb = eos(nb), " ");
-                    break;
-                case BL_LEVELDESC:
-                    /* leveldesc has no leading space, so if we've moved
-                       it past the first position, provide one */
-                    if (i != 0)
-                        Strcpy(nb = eos(nb), " ");
-                    break;
-                /*
-                 * We want "  hunger encumbrance conditions"
-                 *   or    "  encumbrance conditions"
-                 *   or    "  hunger conditions"
-                 *   or    "  conditions"
-                 * 'hunger'      is either " " or " hunger_text";
-                 * 'encumbrance' is either " " or " encumbrance_text";
-                 * 'conditions'  is either ""  or " cond1 cond2...".
-                 */
-                case BL_HUNGER:
-                    /* hunger==" " - keep it, end up with " ";
-                       hunger!=" " - insert space and get "  hunger" */
-                    if (strcmp(val, " "))
-                        Strcpy(nb = eos(nb), " ");
-                    break;
-                case BL_CAP:
-                    /* cap==" " - suppress it, retain "  hunger" or " ";
-                       cap!=" " - use it, get "  hunger cap" or "  cap" */
-                    if (!strcmp(val, " "))
-                        ++val;
-                    break;
-                default:
-                    break;
-                }
-                Strcpy(nb = eos(nb), val); /* status_vals[idx2] */
-            } /* status_activefields[idx2] */
+    /* second row */
+    newbot2[0] = '\0';
+    nb = newbot2;
 
-            if (idx2 == BL_CONDITION && pass < 4
-                && strlen(newbot2) - lndelta > COLNO)
-                break; /* switch to next order */
-        } /* i */
+    Sprintf(nb = eos(nb), "%s", si->dlvl);
+    Sprintf(nb = eos(nb), " %s:%-2ld", si->gold_sym, si->gold);
+    Sprintf(nb = eos(nb), " HP:%d(%d)", si->hp, si->hp_max);
+    Sprintf(nb = eos(nb), " Pw:%d(%d)", si->pw, si->pw_max);
+    Sprintf(nb = eos(nb), " AC:%-2d", si->ac);
+    Sprintf(nb = eos(nb), " %s:%d", si->exp_label, si->exp_level);
+    if (si->show_exp_points)
+        Sprintf(nb = eos(nb), "/%ld", si->exp_points);
+    if (si->show_turns)
+        Sprintf(nb = eos(nb), " T:%ld", si->turns);
+    i = 0;
+    while (i < SIZE(si->conds) && si->conds[i][0]) {
+        Sprintf(nb = eos(nb), " %s", si->conds[i]);
+        i++;
+    }
 
-        if (idx2 == BL_FLUSH) { /* made it past BL_CONDITION */
-            if (pass > 1)
-                mungspaces(newbot2);
-            break;
-        }
-    } /* pass */
     curs(WIN_STATUS, 1, 0);
     putstr(WIN_STATUS, 0, newbot1);
     curs(WIN_STATUS, 1, 1);
