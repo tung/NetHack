@@ -460,6 +460,9 @@ boolean resuming;
 #ifdef MAIL
             ckmailstatus();
 #endif
+#if defined(STATUS_VIA_WINDOWPORT) && defined(STATUS_COLORS)
+            flip_status_info();
+#endif
             rhack((char *) 0);
         }
         if (u.utotype)       /* change dungeon level */

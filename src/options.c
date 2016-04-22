@@ -203,6 +203,9 @@ static struct Bool_Opt {
     { "sparkle", &flags.sparkle, TRUE, SET_IN_GAME },
     { "splash_screen", &iflags.wc_splash_screen, TRUE, DISP_IN_GAME }, /*WC*/
     { "standout", &flags.standout, FALSE, SET_IN_GAME },
+#if defined(STATUS_VIA_WINDOWPORT) && defined(STATUS_COLORS)
+    { "statuscolors", &iflags.use_status_colors, FALSE, SET_IN_GAME },
+#endif
     { "tiled_map", &iflags.wc_tiled_map, PREFER_TILED, DISP_IN_GAME }, /*WC*/
     { "time", &flags.time, FALSE, SET_IN_GAME },
 #ifdef TIMED_DELAY
@@ -2922,6 +2925,21 @@ boolean tinitial, tfrom_file;
         return;
     }
 
+#if defined(STATUS_VIA_WINDOWPORT) && defined(STATUS_COLORS)
+    /* Not to be confused with "statuscolors" (trailing 's'). */
+    /* Rule configuration, e.g. STATUSCOLOR=HP%100:green,HP%50:red */
+    fullname = "statuscolor";
+    if (match_optname(opts, fullname, 11, TRUE)) {
+        if (negated) {
+            bad_negation(fullname, FALSE);
+        } else if ((op = string_for_env_opt(fullname, opts, FALSE)) != 0) {
+            if (!parse_status_color_line(op))
+                badoption(opts);
+        }
+        return;
+    }
+#endif
+
     fullname = "suppress_alert";
     if (match_optname(opts, fullname, 4, TRUE)) {
         if (duplicate)
@@ -3607,6 +3625,7 @@ int nset;
 enum opt_other_enums {
     OPT_OTHER_MSGTYPE = -4,
     OPT_OTHER_MENUCOLOR = -3,
+    OPT_OTHER_STATUSCOLOR = -2,
     OPT_OTHER_APEXC = -1
     /* these must be < 0 */
 };
@@ -3620,6 +3639,9 @@ static struct other_opts {
     { "autopickup exceptions", SET_IN_GAME, OPT_OTHER_APEXC },
     { "menucolors", SET_IN_GAME, OPT_OTHER_MENUCOLOR },
     { "message types", SET_IN_GAME, OPT_OTHER_MSGTYPE },
+#if defined(STATUS_VIA_WINDOWPORT) && defined(STATUS_COLORS)
+    { "statuscolors", SET_IN_GAME, OPT_OTHER_STATUSCOLOR },
+#endif
     { (char *) 0, 0, (enum opt_other_enums) 0 },
 };
 
@@ -3753,6 +3775,10 @@ doset() /* changing options via menu by Per Liboriussen */
                     NULL, count_menucolors());
     opts_add_others(tmpwin, "message types", OPT_OTHER_MSGTYPE,
                     NULL, msgtype_count());
+#if defined(STATUS_VIA_WINDOWPORT) && defined(STATUS_COLORS)
+    opts_add_others(tmpwin, "statuscolors", OPT_OTHER_STATUSCOLOR,
+                    NULL, count_status_colors());
+#endif
 #ifdef PREFIXES_IN_USE
     any = zeroany;
     add_menu(tmpwin, NO_GLYPH, &any, 0, 0, ATR_NONE, "", MENU_UNSELECTED);
@@ -3781,6 +3807,10 @@ doset() /* changing options via menu by Per Liboriussen */
                                             fromfile);
             } else if (opt_indx == OPT_OTHER_MSGTYPE) {
                     (void) special_handling("msgtype", setinitial, fromfile);
+#if defined(STATUS_VIA_WINDOWPORT) && defined(STATUS_COLORS)
+            } else if (opt_indx == OPT_OTHER_STATUSCOLOR) {
+                status_colors_menu();
+#endif
             } else if (opt_indx < boolcount) {
                 /* boolean option */
                 Sprintf(buf, "%s%s", *boolopt[opt_indx].addr ? "!" : "",

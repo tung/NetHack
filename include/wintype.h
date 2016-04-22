@@ -131,6 +131,25 @@ struct status_info {
     boolean show_turns;
 };
 
+struct status_color_attr {
+    int color;
+    int attr_bits;  /* a bit for every ATR_* value */
+};
+
+struct status_info_colors {
+    struct status_color_attr st, dx, co, in, wi, ch;
+    struct status_color_attr score;
+
+    struct status_color_attr gold;
+    struct status_color_attr hp;
+    struct status_color_attr pw;
+    struct status_color_attr ac;
+    struct status_color_attr exp_level, exp_points;
+    struct status_color_attr turns;
+
+    struct status_color_attr conds[MAX_STATUS_CONDS];
+};
+
 #endif /* STATUS_VIA_WINDOWPORT */
 
 #endif /* WINTYPE_H */

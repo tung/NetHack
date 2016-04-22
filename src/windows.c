@@ -460,7 +460,8 @@ static short FDECL(hup_set_font_name, (winid, char *));
 static char *NDECL(hup_get_color_string);
 #endif /* CHANGE_COLOR */
 #ifdef STATUS_VIA_WINDOWPORT
-static void FDECL(hup_status_update, (const struct status_info *));
+static void FDECL(hup_status_update, (const struct status_info *,
+                                      const struct status_info_colors *));
 #endif
 
 static int NDECL(hup_int_ndecl);
@@ -747,8 +748,9 @@ hup_get_color_string(VOID_ARGS)
 #ifdef STATUS_VIA_WINDOWPORT
 /*ARGSUSED*/
 static void
-hup_status_update(si)
+hup_status_update(si, sic)
 const struct status_info *si UNUSED;
+const struct status_info_colors *sic UNUSED;
 {
     return;
 }
@@ -819,8 +821,9 @@ genl_status_finish()
 }
 
 void
-genl_status_update(si)
+genl_status_update(si, sic)
 const struct status_info *si;
+const struct status_info_colors *sic UNUSED;
 {
     char newbot1[MAXCO], newbot2[MAXCO];
     char *nb;

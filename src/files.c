@@ -2371,6 +2371,10 @@ int src;
                           "BOULDER");
     } else if (match_varname(buf, "MENUCOLOR", 9)) {
         (void) add_menu_coloring(bufp);
+#if defined(STATUS_VIA_WINDOWPORT) && defined(STATUS_COLORS)
+    } else if (match_varname(buf, "STATUSCOLOR", 11)) {
+        (void) parse_status_color_line(bufp);
+#endif
     } else if (match_varname(buf, "WARNINGS", 5)) {
         (void) get_uchars(fp, buf, bufp, translate, FALSE, WARNCOUNT,
                           "WARNINGS");

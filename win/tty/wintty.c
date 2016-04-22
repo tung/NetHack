@@ -99,7 +99,7 @@ struct window_procs tty_procs = {
 #ifdef STATUS_VIA_WINDOWPORT
     genl_status_init,
     genl_status_finish,
-    genl_status_update,
+    tty_status_update,
 #endif
     genl_can_suspend_yes,
 };
@@ -169,6 +169,20 @@ STATIC_DCL void FDECL(setup_racemenu, (winid, BOOLEAN_P, int, int, int));
 STATIC_DCL void FDECL(setup_gendmenu, (winid, BOOLEAN_P, int, int, int));
 STATIC_DCL void FDECL(setup_algnmenu, (winid, BOOLEAN_P, int, int, int));
 STATIC_DCL boolean NDECL(reset_role_filtering);
+#ifdef STATUS_VIA_WINDOWPORT
+#ifdef STATUS_COLORS
+STATIC_DCL void FDECL(start_status_color_attr,
+                      (const struct status_color_attr *));
+STATIC_DCL void FDECL(end_status_color_attr,
+                      (const struct status_color_attr *));
+#endif
+STATIC_DCL void FDECL(putstat_i,
+                      (const char *, const struct status_color_attr *,
+                       const char *, int));
+STATIC_DCL void FDECL(putstat_l,
+                      (const char *, const struct status_color_attr *,
+                       const char *, long));
+#endif
 
 /*
  * A string containing all the default commands -- to add to a list
@@ -3374,6 +3388,173 @@ char *posbar;
 #endif
 }
 #endif
+
+#ifdef STATUS_VIA_WINDOWPORT
+
+#ifdef STATUS_COLORS
+
+STATIC_OVL void
+start_status_color_attr(sca)
+const struct status_color_attr *sca;
+{
+    int i;
+#ifdef TEXTCOLOR
+    if (sca->color != NO_COLOR)
+        term_start_color(sca->color);
+#endif
+    for (i = 0; (1 << i) <= sca->attr_bits; i++) {
+        if (i != ATR_NONE && (sca->attr_bits & (1 << i))) {
+            term_start_attr(i);
+        }
+    }
+}
+
+STATIC_OVL void
+end_status_color_attr(sca)
+const struct status_color_attr *sca;
+{
+    int i;
+#ifdef TEXTCOLOR
+    if (sca->color != NO_COLOR)
+        term_end_color();
+#endif
+    for (i = 0; (1 << i) <= sca->attr_bits; i++) {
+        if (i != ATR_NONE && (sca->attr_bits & (1 << i))) {
+            term_end_attr(i);
+        }
+    }
+}
+
+#endif /* STATUS_COLORS */
+
+STATIC_OVL void
+putstat_i(prefix, sca, fmt, val)
+const char *prefix, *fmt;
+const struct status_color_attr *sca;
+int val;
+{
+    char buf[MAXCO];
+    tty_putstr(WIN_STATUS, 0, prefix);
+#ifdef STATUS_COLORS
+    start_status_color_attr(sca);
+#endif
+    Sprintf(buf, fmt, val);
+    tty_putstr(WIN_STATUS, 0, buf);
+#ifdef STATUS_COLORS
+    end_status_color_attr(sca);
+#endif
+}
+
+STATIC_OVL void
+putstat_l(prefix, sca, fmt, val)
+const char *prefix, *fmt;
+const struct status_color_attr *sca;
+long val;
+{
+    char buf[MAXCO];
+    tty_putstr(WIN_STATUS, 0, prefix);
+#ifdef STATUS_COLORS
+    start_status_color_attr(sca);
+#endif
+    Sprintf(buf, fmt, val);
+    tty_putstr(WIN_STATUS, 0, buf);
+#ifdef STATUS_COLORS
+    end_status_color_attr(sca);
+#endif
+}
+
+void
+tty_status_update(si, sic)
+const struct status_info *si;
+const struct status_info_colors *sic;
+{
+    char buf[MAXCO];
+    int name_title_len, rest_len;
+    int i;
+
+    /* First line. */
+    curs(WIN_STATUS, 1, 0);
+
+    /* Name and title. */
+    Sprintf(buf, "%s the %s", si->name, si->title);
+    tty_putstr(WIN_STATUS, 0, buf);
+    name_title_len = strlen(si->name) + 5 + strlen(si->title);
+
+    /* Calculate padding between name-and-title and the rest of the first line.
+     * If the rest of the line is too long then omit the padding entirely.
+     */
+    Sprintf(buf, "  St:%d%s Dx:%d Co:%d In:%d Wi:%d Ch:%d  %s", si->st,
+            (si->st_extra ? "/xx" : ""), si->dx, si->co, si->in, si->wi, si->ch,
+            si->align);
+    if (si->show_score)
+        Sprintf(eos(buf), " S:%ld", si->score);
+    rest_len = strlen(buf);
+
+    if (name_title_len + rest_len < (CO - 1)) {
+        /* Pad the name and title to up to 30 characters. */
+        int pad = (CO - 1) - (name_title_len + rest_len);
+        if (pad > (30 - name_title_len))
+            pad = 30 - name_title_len;
+        if (pad > 0) {
+            Sprintf(buf, "%*s", pad, " ");
+            tty_putstr(WIN_STATUS, 0, buf);
+        }
+    }
+
+    /* The rest of the first line. */
+    tty_putstr(WIN_STATUS, 0, "  ");
+    if (si->st_extra == 100) {
+        putstat_i("St:", &sic->st, "%d/**", si->st);
+    } else if (si->st_extra > 0) {
+        putstat_i("St:", &sic->st, "%d", si->st);
+        putstat_i("", &sic->st, "/%02d", si->st_extra);
+    } else {
+        putstat_i("St:", &sic->st, "%d", si->st);
+    }
+    putstat_i(" Dx:", &sic->dx, "%d", si->dx);
+    putstat_i(" Co:", &sic->co, "%d", si->co);
+    putstat_i(" In:", &sic->in, "%d", si->in);
+    putstat_i(" Wi:", &sic->wi, "%d", si->wi);
+    putstat_i(" Ch:", &sic->ch, "%d", si->ch);
+    tty_putstr(WIN_STATUS, 0, "  ");
+    tty_putstr(WIN_STATUS, 0, si->align);
+    if (si->show_score)
+        putstat_l(" S:", &sic->score, "%ld", si->score);
+
+    /* Second line. */
+    curs(WIN_STATUS, 1, 1);
+    tty_putstr(WIN_STATUS, 0, si->dlvl);
+    tty_putstr(WIN_STATUS, 0, "  ");
+    putmixed(WIN_STATUS, 0, si->gold_sym);
+    putstat_l(":", &sic->gold, "%ld", si->gold);
+    putstat_i(" HP:", &sic->hp, "%d", si->hp);
+    putstat_i("", &sic->hp, "(%d)", si->hp_max);
+    putstat_i(" Pw:", &sic->pw, "%d", si->pw);
+    putstat_i("", &sic->pw, "(%d)", si->pw_max);
+    putstat_i(" AC:", &sic->ac, "%d", si->ac);
+    tty_putstr(WIN_STATUS, 0, " ");
+    tty_putstr(WIN_STATUS, 0, si->exp_label);
+    putstat_i(":", &sic->exp_level, "%d", si->exp_level);
+    if (si->show_exp_points)
+        putstat_l("/", &sic->exp_points, "%ld", si->exp_points);
+    if (si->show_turns)
+        putstat_l(" T:", &sic->turns, "%ld", si->turns);
+    tty_putstr(WIN_STATUS, 0, " ");
+    i = 0;
+    while (i < SIZE(si->conds) && si->conds[i][0]) {
+        tty_putstr(WIN_STATUS, 0, " ");
+#ifdef STATUS_COLORS
+        start_status_color_attr(&sic->conds[i]);
+#endif
+        tty_putstr(WIN_STATUS, 0, si->conds[i]);
+#ifdef STATUS_COLORS
+        end_status_color_attr(&sic->conds[i]);
+#endif
+        i++;
+    }
+}
+
+#endif /* STATUS_VIA_WINDOWPORT */
 
 #endif /* TTY_GRAPHICS */
 

@@ -77,7 +77,8 @@ struct window_procs {
 #ifdef STATUS_VIA_WINDOWPORT
     void NDECL((*win_status_init));
     void NDECL((*win_status_finish));
-    void FDECL((*win_status_update), (const struct status_info *));
+    void FDECL((*win_status_update),
+               (const struct status_info *, const struct status_info_colors *));
 #endif
     boolean NDECL((*win_can_suspend));
 };
@@ -375,7 +376,9 @@ struct chain_procs {
 #ifdef STATUS_VIA_WINDOWPORT
     void FDECL((*win_status_init), (CARGS));
     void FDECL((*win_status_finish), (CARGS));
-    void FDECL((*win_status_update), (CARGS, const struct status_info *));
+    void FDECL((*win_status_update),
+               (CARGS, const struct status_info *,
+                const struct status_info_colors *));
 #endif
     boolean FDECL((*win_can_suspend), (CARGS));
 };

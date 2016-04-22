@@ -389,9 +389,10 @@ D.  Status Display Routines
 status_init()   -- core calls this to notify the window port that a status
 		   display is required. The window port should perform 
 		   the necessary initialization in here, allocate memory, etc.
-status_update(const struct status_info *si)
+status_update(const struct status_info *si,const struct status_info_colors *sic)
 		-- Core calls this to send updated status information to the
-		   window port.
+		   window port, along with the colors and attributes they
+		   should be rendered with.
 		-- The exact structure of status_info can be found in wintype.h
 		   and should be mostly self-explanatory.
 		-- The name and title fields of status_info are sent
@@ -411,7 +412,10 @@ status_update(const struct status_info *si)
 		-- The score, exp_points and turns fields should only be
 		   displayed by the window port if the show_score,
 		   show_exp_points and show_turns flags are TRUE respectively.
-
+		-- The color fields mostly mirror the info fields.  Fields in
+		   the info struct that aren't in the color struct should be
+		   left uncolored or borrow their color from a related field,
+		   e.g. both 'st' and 'st_extra' should be colored together.
 status_finish() -- called when it is time for the window port to tear down
 		   the status display and free allocated memory, etc.
 
