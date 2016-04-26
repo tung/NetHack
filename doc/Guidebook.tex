@@ -3048,10 +3048,6 @@ attack to which it is resistant (default on).  Persistent.
 \item[\ib{standout}]
 Boldface monsters and ``{\tt --More--}'' (default off).  Persistent.
 %.lp
-\item[\ib{statushilites}]
-Enable coloring of status fields (default off).
-See ``{\it Configuring Status Hilites\/}'' for further information.
-%.lp
 \item[\ib{suppress\verb+_+alert}]
 This option may be set to a NetHack version level to suppress
 alert notification messages about feature changes for that 
@@ -3577,59 +3573,6 @@ Each SOUND entry is broken down into the following parts:
 
 %.lp ""
 The pattern should be a regular expression.
-
-%.lp
-%.hn 2
-\subsection*{Configuring Status Hilites}
-
-%.pg
-Your copy of NetHack may have been compiled with support for {\it Status Hilites}.
-If so, you can customize your game display by setting thresholds to 
-change the color or appearance of fields in the status display.
-
-For example, the following line in your config file will cause
-the hitpoints field to display in the color red if your hitpoints
-drop to or below a threshold of 30%:
-\begin{verbatim}
-    OPTION=hilite_status: hitpoints/30%/red/normal
-\end{verbatim}
-%.pg
-For another example, the following line in your config file will cause
-wisdom to be displayed red if it drops and green if it rises.
-\begin{verbatim}
-    OPTION=hilite_status: wisdom/updown/red/green
-\end{verbatim}
-You can adjust the display of the following status fields:
-%.sd
-\begin{center}
-\begin{tabular}{lll}
-%TABLE_START
-title & strength & dexterity\\
-constitution & intelligence & wisdom\\
-charisma & alignment & score\\
-carrying-capacity & gold & power\\
-power-max & experience-level & armor-class\\
-HD & time & hunger\\
-hitpoints & hitpoints-max & dungeon-level\\
-experience & condition\\
-%TABLE_END  Do not delete this line.
-\end{tabular}
-\end{center}
-%.ed
-
-%.lp ""
-Allowed colors are {\it black}, {\it red}, {\it green}, {\it brown},
-{\it blue}, {\it magenta}, {\it cyan}, {\it gray}, {\it orange},
-{\it lightgreen}, {\it yellow}, {\it lightblue}, {\it lightmagenta},
-{\it lightcyan}, and {\it white}.
-
-%.lp ""
-Behaviours can occur based on percentage thresholds, updown, or absolute values.
-The in-game options menu can help you determine the correct syntax for a 
-config file.
-
-%.lp ""
-The whole feature can be disable by setting option {\it statushilites} off.
 
 %.lp
 %.hn 2
