@@ -2668,6 +2668,9 @@ NetHack should use this size font for the status window.
 NetHack should use this size font for text windows.
 .lp fullscreen
 NetHack should try and display on the entire screen rather than in a window.
+.lp hitpointbar
+NetHack should show a graphical bar representing current hit points if it
+wouldn't otherwise.
 .lp large_font
 NetHack should use a large font.
 .lp map_mode
