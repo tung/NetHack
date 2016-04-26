@@ -233,7 +233,8 @@ extern
 #define WC2_WRAPTEXT 0x04L /* 03 wrap long lines of text                */
 #define WC2_SELECTSAVED 0x08L /* 04 saved game selection menu */
 #define WC2_DARKGRAY 0x10L /* 05 use bold black for black glyphs        */
-                           /* 27 free bits */
+#define WC2_HITPOINTBAR 0x20L /* 06 show bar representing hit points */
+                           /* 26 free bits */
 
 #define ALIGN_LEFT 1
 #define ALIGN_RIGHT 2

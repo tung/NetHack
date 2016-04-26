@@ -652,6 +652,7 @@ to support:
   |  softkeyboard      | WC2_SOFTKEYBOARD   | wc2_softkeyboard   |boolean |
   |  wraptext          | WC2_WRAPTEXT       | wc2_wraptext       |boolean |
   |  selectsaved       | WC2_SELECTSAVED    | wc2_selectsaved    |boolean |
+  |  hitpointbar       | WC2_HITPOINTBAR    | wc2_hitpointbar    |boolean |
   +--------------------+--------------------+--------------------+--------+
 
 align_message	-- where to place message window (top, bottom, left, right)
@@ -671,6 +672,8 @@ font_size_text	-- port should use this size font for text windows.
 font_status	-- port should use a font by this name for status display.
 font_text	-- port should use a font by this name for text windows.
 fullscreen      -- port should try to use the whole screen.
+hitpointbar	-- port should show a graphical bar representing hit points if
+		   it wouldn't otherwise.
 hilite_pet	-- port should mark pets in some special way on the map.
 map_mode	-- port should display the map in the manner specified.
 player_selection

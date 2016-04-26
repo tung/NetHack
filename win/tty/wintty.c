@@ -63,7 +63,11 @@ struct window_procs tty_procs = {
 #if defined(SELECTSAVED)
     WC2_SELECTSAVED |
 #endif
-        WC2_DARKGRAY,
+        WC2_DARKGRAY
+#if defined(STATUS_VIA_WINDOWPORT)
+        | WC2_HITPOINTBAR
+#endif
+        ,
     tty_init_nhwindows, tty_player_selection, tty_askname, tty_get_nh_event,
     tty_exit_nhwindows, tty_suspend_nhwindows, tty_resume_nhwindows,
     tty_create_nhwindow, tty_clear_nhwindow, tty_display_nhwindow,
@@ -182,6 +186,7 @@ STATIC_DCL void FDECL(putstat_i,
 STATIC_DCL void FDECL(putstat_l,
                       (const char *, const struct status_color_attr *,
                        const char *, long));
+STATIC_DCL void FDECL(draw_hitpointbar, (char *, int, int, int));
 #endif
 
 /*
@@ -3463,6 +3468,64 @@ long val;
 #endif
 }
 
+STATIC_OVL void
+draw_hitpointbar(name_title, hp, hp_max, color)
+char *name_title;
+int hp;
+int hp_max;
+int color;
+{
+    int full_bar_len;
+    int bar_pos;
+    boolean partial_bar;
+    char tmpc = '\0';
+
+    if (hp_max < 1)
+        hp_max = 1;
+    if (hp < 0)
+        hp = 0;
+    if (hp > hp_max)
+        hp = hp_max;
+
+    full_bar_len = strlen(name_title);
+    bar_pos = ((full_bar_len * hp) + hp_max / 2) / hp_max;
+    if (bar_pos < 1 && hp > 0)
+        bar_pos = 1;
+    if (bar_pos >= full_bar_len && hp < hp_max)
+        bar_pos = full_bar_len - 1;
+
+    partial_bar = bar_pos > 0 && bar_pos < full_bar_len;
+    if (partial_bar) {
+        /* Split the string with a null; we'll restore it later. */
+        tmpc = name_title[bar_pos];
+        name_title[bar_pos] = '\0';
+    }
+
+    /* Draw the hitpointbar. */
+    tty_putstr(WIN_STATUS, 0, "[");
+    if (bar_pos > 0) {
+#ifdef TEXTCOLOR
+        if (color != NO_COLOR)
+            term_start_color(color);
+#endif
+        term_start_attr(ATR_INVERSE);
+    }
+    tty_putstr(WIN_STATUS, 0, name_title);
+    if (bar_pos > 0) {
+#ifdef TEXTCOLOR
+        if (color != NO_COLOR)
+            term_end_color();
+#endif
+        term_end_attr(ATR_INVERSE);
+    }
+    if (partial_bar) {
+        /* Restore nulled character and draw the rest of the bar. */
+        name_title[bar_pos] = tmpc;
+        tty_putstr(WIN_STATUS, 0, &name_title[bar_pos]);
+    }
+    tty_putstr(WIN_STATUS, 0, "]");
+}
+
 void
 tty_status_update(si, sic)
 const struct status_info *si;
@@ -3477,8 +3540,15 @@ const struct status_info_colors *sic;
 
     /* Name and title. */
     Sprintf(buf, "%s the %s", si->name, si->title);
-    tty_putstr(WIN_STATUS, 0, buf);
-    name_title_len = strlen(si->name) + 5 + strlen(si->title);
+    if (iflags.wc2_hitpointbar) {
+        draw_hitpointbar(buf, si->hp, si->hp_max, sic->hp.color);
+        /* Include the '[' and ']' characters. */
+        name_title_len = strlen(si->name) + 7 + strlen(si->title);
+    } else {
+        tty_putstr(WIN_STATUS, 0, buf);
+        /* For padding calculations. */
+        name_title_len = strlen(si->name) + 5 + strlen(si->title);
+    }
 
     /* Calculate padding between name-and-title and the rest of the first line.
      * If the rest of the line is too long then omit the padding entirely.
