@@ -3048,6 +3048,10 @@ attack to which it is resistant (default on).  Persistent.
 \item[\ib{standout}]
 Boldface monsters and ``{\tt --More--}'' (default off).  Persistent.
 %.lp
+\item[\ib{statuscolors}]
+Enable coloring of status fields (default off).
+See ``{\it Configuring Status Colors\/}'' for further information.
+%.lp
 \item[\ib{suppress\verb+_+alert}]
 This option may be set to a NetHack version level to suppress
 alert notification messages about feature changes for that 
@@ -3573,6 +3577,125 @@ Each SOUND entry is broken down into the following parts:
 
 %.lp ""
 The pattern should be a regular expression.
+
+%.lp
+%.hn 2
+\subsection*{Configuring Status Colors}
+
+%.pg
+Your copy of NetHack may have been compiled with support for
+{\it Status Colors}.  If so, you can customize your game display by
+setting rules to change the color or appearance of fields in the status
+display.
+
+%.pg
+First, status colors must be enabled:
+
+\begin{verbatim}
+    OPTIONS=statuscolors
+\end{verbatim}
+
+%.pg
+Status colors operate by a set of rules that can be defined with
+{\tt STATUSCOLOR\/} lines in your configuration file.  Alternately, they
+can be set in-game via the {\it statuscolors\/} compound option in the
+in-game options menu, but rules set this way will not persist across
+sessions.
+
+%.pg
+Status color rules can be set for numeric fields and conditions.  Numeric
+field rules come in the form of
+``{\tt <field><op><value>:<color-option>\/}'', for example:
+
+\begin{verbatim}
+    STATUSCOLOR=HP%100:brightgreen&underline
+\end{verbatim}
+
+%.pg
+Multiple rules can be set in a single {\tt STATUSCOLOR\/} line by
+separating them with commas, for example:
+
+\begin{verbatim}
+    STATUSCOLOR=HP%100:green,HP%75:yellow,HP%50:orange,HP%25:red
+\end{verbatim}
+
+%.pg
+Valid fields are: {\it St}, {\it Dx}, {\it Co}, {\it In}, {\it Wi}, {\it Ch},
+{\it Score}, {\it Gold}, {\it HP}, {\it Pw}, {\it AC}, {\it XL} (experience
+level), {\it XP} (experience points) and {\it Turns}.
+
+%.pg
+Valid ops are: `{\tt +}' (up), `{\tt -}' (down), `{\tt .}' (equal),
+`{\tt <}' (less than), `{\tt \%}' (percent, only valid for {\it HP} and
+{\it Pw} fields) and `{\tt >}' (greater than).
+
+%.pg
+A color option consists of a mandatory color name, followed by zero or more
+attributes delimited by `\&', for example: ``{\tt red}'' or
+``{\tt nocolor\&bold\&underline}''.
+
+%.pg
+Valid colors are: {\it nocolor}, {\it black}, {\it red}, {\it green},
+{\it brown}, {\it blue}, {\it magenta}, {\it cyan}, {\it gray},
+{\it orange}, {\it brightgreen}, {\it yellow}, {\it brightblue},
+{\it brightmagenta}, {\it brightcyan} and {\it white}.  For backwards
+compatibility, {\it lightgreen}, {\it lightblue}, {\it lightmagenta} and
+{\it lightcyan} are also accepted.
+
+%.pg
+Valid attributes are: {\it bold}, {\it dim}, {\it underline}, {\it blink}
+and {\it inverse}.  Not all of these attributes may be supported by all
+window ports.  For backwards compatibility, ``{\it none}'' is also
+accepted, even though it does nothing.
+
+%.pg
+Here's an example of a set of rules that formats strength at different
+absolute value thresholds, as well as changes:
+
+\begin{verbatim}
+    STATUSCOLOR=St<18/01:nocolor,St<18/**:white
+    STATUSCOLOR=St.18/**:white&underline
+    STATUSCOLOR=St>18/**:white&underline&inverse
+    STATUSCOLOR=St+1:brightgreen&inverse,St-1:orange&inverse
+\end{verbatim}
+
+%.pg
+Here's an example of formatting gold based on how much is gained or lost from
+input to input:
+
+\begin{verbatim}
+    STATUSCOLOR=Gold+1:green
+    STATUSCOLOR=Gold+100:brightgreen
+    STATUSCOLOR=Gold+200:brightgreen&underline
+    STATUSCOLOR=Gold-1:red
+\end{verbatim}
+
+%.pg
+Here's an example of coloring armor class by changes:
+
+\begin{verbatim}
+    STATUSCOLOR=AC-1:brightgreen&inverse,AC+1:orange&inverse
+\end{verbatim}
+
+%.pg
+As well as numeric fields, conditions can also be colored.  Condition rules
+come in the form of ``{\tt <condition>:<color-option>}'', for example:
+
+\begin{verbatim}
+    STATUSCOLOR=Hungry:yellow&underline
+\end{verbatim}
+
+%.pg
+Valid condtions are: {\it Blind}, {\it Conf}, {\it FoodPois}, {\it Hallu},
+{\it Ill}, {\it Slime}, {\it Stun}, {\it Satiated}, {\it Hungry}, {\it Weak},
+{\it Fainting}, {\it Fainted}, {\it Starved}, {\it Burdened}, {\it Stressed},
+{\it Strained}, {\it Overtaxed} and {\it Overloaded}.
+
+%.pg
+If you create a set of status color rules that you like with the in-game
+status colors menu, you may be able to copy-and-paste them into your
+configuration file by choosing ``Display raw rules'', which will show your
+rules in the correct syntax.
 
 %.lp
 %.hn 2

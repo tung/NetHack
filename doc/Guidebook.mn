@@ -2556,6 +2556,9 @@ Display a sparkly effect when a monster (including yourself) is hit by an
 attack to which it is resistant (default on).  Persistent.
 .lp standout
 Boldface monsters and ``\fB--More--\fP'' (default off).  Persistent.
+.lp statuscolors
+Enable coloring of status fields (default off).
+See ``Configuring Status Colors'' for further information.
 .lp suppress_alert
 This option may be set to a NetHack version level to suppress
 alert notification messages about feature changes for that
@@ -2975,6 +2978,97 @@ the volume to be set while playing the sound file.
 .PE
 .lp ""
 The pattern should be a POSIX extended regular expression.
+.pg
+.hn 2
+Configuring Status Colors
+.pg
+Your copy of NetHack may have been compiled with support for ``Status Colors''.
+If so, you can customize your game display by setting rules to change the color
+or appearance of fields in the status display.
+.pg
+First, status colors must be enabled:
+.si
+.lp OPTIONS=statuscolors
+.ei
+.pg
+Status colors operate by a set of rules that can be defined with
+``STATUSCOLOR'' lines in your configuration file.  Alternately, they can be set
+in-game via the ``statuscolors'' compound option in the in-game options menu,
+but rules set this way will not persist across sessions.
+.pg
+Status color rules can be set for numeric fields and conditions.  Numeric field
+rules come in the form of ``<field><op><value>:<color-option>'', for example:
+.si
+.lp STATUSCOLOR=HP%100:brightgreen&underline
+.ei
+.pg
+Multiple rules can be set in a single ``STATUSCOLOR'' line by separating them
+with commas, for example:
+.si
+.lp STATUSCOLOR=HP%100:green,HP%75:yellow,HP%50:orange,HP%25:red
+.ei
+.pg
+Valid fields are: St, Dx, Co, In, Wi, Ch, Score, Gold, HP, Pw, AC, XL
+(experience level), XP (experience points) and Turns.
+.pg
+Valid ops are: `+' (up), `-' (down), `.' (equal), `<' (less than), `%'
+(percent, only valid for HP and Pw fields) and `>' (greater than).
+.pg
+A color option consists of a mandatory color name, followed by zero or more
+attributes delimited by `&', for example: ``red'' or ``nocolor&bold&underline''.
+.pg
+Valid colors are: nocolor, black, red, green, brown, blue, magenta, cyan, gray,
+orange, brightgreen, yellow, brightblue, brightmagenta, brightcyan and white.
+For backwards compatibility, lightgreen, lightblue, lightmagenta and lightcyan
+are also accepted.
+.pg
+Valid attributes are: bold, dim, underline, blink and inverse.  Not all of
+these attributes may be supported by all window ports.  For backwards
+compatibility, ``none'' is also accepted, even though it does nothing.
+.pg
+Here's an example of a set of rules that formats strength at different
+absolute value thresholds, as well as changes:
+.sd
+.si
+STATUSCOLOR=St<18/01:nocolor,St<18/**:white
+STATUSCOLOR=St.18/**:white&underline
+STATUSCOLOR=St>18/**:white&underline&inverse
+STATUSCOLOR=St+1:brightgreen&inverse,St-1:orange&inverse
+.ei
+.ed
+.pg
+Here's an example of formatting gold based on how much is gained or lost from
+input to input:
+.sd
+.si
+STATUSCOLOR=Gold+1:green
+STATUSCOLOR=Gold+100:brightgreen
+STATUSCOLOR=Gold+200:brightgreen&underline
+STATUSCOLOR=Gold-1:red
+.ei
+.ed
+.pg
+Here's an example of coloring armor class by changes:
+.si
+.lp STATUSCOLOR=AC-1:brightgreen&inverse,AC+1:orange&inverse
+.ei
+.pg
+As well as numeric fields, conditions can also be colored.  Condition rules
+come in the form of ``<condition>:<color-option>'', for example:
+.si
+.lp STATUSCOLOR=Hungry:yellow&underline
+.ei
+.pg
+
+Valid condtions are: Blind, Conf, FoodPois, Hallu, Ill, Slime, Stun, Satiated,
+Hungry, Weak, Fainting, Fainted, Starved, Burdened, Stressed, Strained,
+Overtaxed and Overloaded.
+
+.pg
+If you create a set of status color rules that you like with the in-game
+status colors menu, you may be able to copy-and-paste them into your
+configuration file by choosing ``Display raw rules'', which will show your
+rules in the correct syntax.
 .pg
 .hn 2
 Modifying NetHack Symbols
